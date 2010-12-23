@@ -1,5 +1,8 @@
 /*
  * Copyright (C) 2008 The Android Open Source Project
+ * Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
+ * Not a Contribution, Apache license notifications and license are retained
+ * for attribution purposes only
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +41,7 @@ import android.preference.PreferenceActivity;
 import android.preference.PreferenceGroup;
 import android.preference.PreferenceScreen;
 import android.provider.Telephony;
+import android.telephony.MSimTelephonyManager;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -84,6 +88,7 @@ public class ApnSettings extends PreferenceActivity implements
     private RestoreApnProcessHandler mRestoreApnProcessHandler;
 
     private String mSelectedKey;
+    private int mSubscription = 0;
 
     private boolean mUseNvOperatorForEhrpd = SystemProperties.getBoolean(
             "persist.radio.use_nv_for_ehrpd", false);
@@ -124,7 +129,9 @@ public class ApnSettings extends PreferenceActivity implements
 
         addPreferencesFromResource(R.xml.apn_settings);
         getListView().setItemsCanFocus(true);
-
+        mSubscription = getIntent().getIntExtra(SelectSubscription.SUBSCRIPTION_KEY,
+                MSimTelephonyManager.getDefault().getDefaultSubscription());
+        Log.d(TAG, "onCreate received sub :" + mSubscription);
         mMobileStateFilter = new IntentFilter(
                 TelephonyIntents.ACTION_ANY_DATA_CONNECTION_STATE_CHANGED);
     }
@@ -143,9 +150,18 @@ public class ApnSettings extends PreferenceActivity implements
     }
 
     @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+
+        mSubscription = intent.getIntExtra(SelectSubscription.SUBSCRIPTION_KEY,
+                MSimTelephonyManager.getDefault().getDefaultSubscription());
+        Log.d(TAG, "onNewIntent received sub :" + mSubscription);
+    }
+
+    @Override
     protected void onPause() {
         super.onPause();
-        
+
         unregisterReceiver(mMobileStateReceiver);
     }
 
@@ -321,7 +337,7 @@ public class ApnSettings extends PreferenceActivity implements
             switch (msg.what) {
                 case EVENT_RESTORE_DEFAULTAPN_START:
                     ContentResolver resolver = getContentResolver();
-                    resolver.delete(DEFAULTAPN_URI, null, null);                    
+                    resolver.delete(DEFAULTAPN_URI, null, null);
                     mRestoreApnUiHandler
                         .sendEmptyMessage(EVENT_RESTORE_DEFAULTAPN_COMPLETE);
                     break;
@@ -364,8 +380,10 @@ public class ApnSettings extends PreferenceActivity implements
                 result.add(mccMncForEhrpd);
             }
         }
-        String mccMncFromSim = SystemProperties.get(
-                TelephonyProperties.PROPERTY_APN_SIM_OPERATOR_NUMERIC, null);
+
+        String mccMncFromSim = MSimTelephonyManager.getTelephonyProperty(
+                TelephonyProperties.PROPERTY_APN_SIM_OPERATOR_NUMERIC, mSubscription, null);
+
         if (mccMncFromSim != null && mccMncFromSim.length() > 0) {
             result.add(mccMncFromSim);
         }

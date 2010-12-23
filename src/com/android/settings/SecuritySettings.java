@@ -1,5 +1,9 @@
 /*
  * Copyright (C) 2007 The Android Open Source Project
+ * Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
+ *
+ * Not a Contribution, Apache license notifications and license are retained
+ * for attribution purposes only
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +42,7 @@ import android.preference.PreferenceGroup;
 import android.preference.PreferenceScreen;
 import android.provider.Settings;
 import android.security.KeyStore;
+import android.telephony.MSimTelephonyManager;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 
@@ -69,6 +74,7 @@ public class SecuritySettings extends SettingsPreferenceFragment
 
     // Misc Settings
     private static final String KEY_SIM_LOCK = "sim_lock";
+    private static final String KEY_SIM_LOCK_SETTINGS = "sim_lock_settings";
     private static final String KEY_SHOW_PASSWORD = "show_password";
     private static final String KEY_RESET_CREDENTIALS = "reset_credentials";
     private static final String KEY_TOGGLE_INSTALL_APPLICATIONS = "toggle_install_applications";
@@ -336,23 +342,62 @@ public class SecuritySettings extends SettingsPreferenceFragment
             // Append the rest of the settings
             addPreferencesFromResource(R.xml.security_settings_misc);
 
-            // Do not display SIM lock for devices without an Icc card
-            TelephonyManager tm = TelephonyManager.getDefault();
-            if (!tm.hasIccCard()) {
-                root.removePreference(root.findPreference(KEY_SIM_LOCK));
-            } else {
-                // Disable SIM lock if sim card is missing or unknown
-                if ((TelephonyManager.getDefault().getSimState() ==
-                                     TelephonyManager.SIM_STATE_ABSENT) ||
-                    (TelephonyManager.getDefault().getSimState() ==
-                                     TelephonyManager.SIM_STATE_UNKNOWN)) {
+            if (MSimTelephonyManager.getDefault().isMultiSimEnabled()) {
+                MSimTelephonyManager tm = MSimTelephonyManager.getDefault();
+                int numPhones = MSimTelephonyManager.getDefault().getPhoneCount();
+                boolean disableLock = false;
+                boolean removeLock = false;
+                for (int i = 0; i < numPhones; i++) {
+                    // Do not display SIM lock for devices without an Icc card
+                    if (!tm.hasIccCard(i)) {
+                        removeLock = true;
+                    } else {
+                        // Disable SIM lock if sim card is missing or unknown
+                        removeLock = false;
+                        if ((tm.getSimState(i) == TelephonyManager.SIM_STATE_ABSENT)
+                                || (tm.getSimState(i) == TelephonyManager.SIM_STATE_UNKNOWN)) {
+                            disableLock = true;
+                        } else {
+                            disableLock = false;
+                        }
+                    }
+                }
+                if (removeLock) {
+                    root.removePreference(root.findPreference(KEY_SIM_LOCK));
+                }
+                if (disableLock) {
                     root.findPreference(KEY_SIM_LOCK).setEnabled(false);
+                }
+            } else {
+                // Do not display SIM lock for devices without an Icc card
+                TelephonyManager tm = TelephonyManager.getDefault();
+                if (!tm.hasIccCard()) {
+                    root.removePreference(root.findPreference(KEY_SIM_LOCK));
+                } else {
+                    // Disable SIM lock if sim card is missing or unknown
+                    if ((TelephonyManager.getDefault().getSimState() ==
+                                         TelephonyManager.SIM_STATE_ABSENT) ||
+                        (TelephonyManager.getDefault().getSimState() ==
+                                         TelephonyManager.SIM_STATE_UNKNOWN)) {
+                        root.findPreference(KEY_SIM_LOCK).setEnabled(false);
+                    }
                 }
             }
 
             // Show password
             mShowPassword = (CheckBoxPreference) root.findPreference(KEY_SHOW_PASSWORD);
+            // SIM/RUIM lock
+            Preference iccLock = (Preference) root.findPreference(KEY_SIM_LOCK_SETTINGS);
 
+            Intent intent = new Intent();
+            if (MSimTelephonyManager.getDefault().isMultiSimEnabled()) {
+                intent.setClassName("com.android.settings", "com.android.settings.SelectSubscription");
+                intent.putExtra(SelectSubscription.PACKAGE, "com.android.settings");
+                intent.putExtra(SelectSubscription.TARGET_CLASS, "com.android.settings.IccLockSettings");
+            } else {
+                intent.setClassName("com.android.settings", "com.android.settings.IccLockSettings");
+            }
+            iccLock.setIntent(intent);
             // Credential storage
             mResetCredentials = root.findPreference(KEY_RESET_CREDENTIALS);
 
