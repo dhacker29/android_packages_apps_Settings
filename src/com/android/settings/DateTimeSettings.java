@@ -45,6 +45,9 @@ import java.util.Date;
 import java.util.TimeZone;
 import android.util.Log;
 import android.telephony.TelephonyManager;
+import android.telephony.MSimTelephonyManager;
+
+import static com.android.internal.telephony.MSimConstants.DEFAULT_SUBSCRIPTION;
 
 public class DateTimeSettings extends SettingsPreferenceFragment
         implements OnSharedPreferenceChangeListener,
@@ -157,9 +160,15 @@ public class DateTimeSettings extends SettingsPreferenceFragment
         getPreferenceScreen().getSharedPreferences()
                 .registerOnSharedPreferenceChangeListener(this);
 
-        int activePhoneType = TelephonyManager.getDefault().getPhoneType();
+        int activePhoneType;
         // If phone type is CDMA disable the manual time mode & force
         // auto time mode
+        if (MSimTelephonyManager.getDefault().isMultiSimEnabled()) {
+            activePhoneType = MSimTelephonyManager.getDefault().
+                    getCurrentPhoneType(DEFAULT_SUBSCRIPTION);
+        } else {
+            activePhoneType = TelephonyManager.getDefault().getPhoneType();
+        }
         if (TelephonyManager.PHONE_TYPE_CDMA == activePhoneType &&
                                          !isTimeServicesDaemonEnabled) {
             setAutoState(false, true);
