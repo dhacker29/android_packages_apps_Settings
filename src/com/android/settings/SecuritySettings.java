@@ -386,18 +386,23 @@ public class SecuritySettings extends SettingsPreferenceFragment
 
             // Show password
             mShowPassword = (CheckBoxPreference) root.findPreference(KEY_SHOW_PASSWORD);
-            // SIM/RUIM lock
-            Preference iccLock = (Preference) root.findPreference(KEY_SIM_LOCK_SETTINGS);
 
-            Intent intent = new Intent();
-            if (MSimTelephonyManager.getDefault().isMultiSimEnabled()) {
-                intent.setClassName("com.android.settings", "com.android.settings.SelectSubscription");
-                intent.putExtra(SelectSubscription.PACKAGE, "com.android.settings");
-                intent.putExtra(SelectSubscription.TARGET_CLASS, "com.android.settings.IccLockSettings");
-            } else {
-                intent.setClassName("com.android.settings", "com.android.settings.IccLockSettings");
+            if (root.findPreference(KEY_SIM_LOCK) != null) {
+                // SIM/RUIM lock
+                Preference iccLock = (Preference) root.findPreference(KEY_SIM_LOCK_SETTINGS);
+
+                Intent intent = new Intent();
+                if (MSimTelephonyManager.getDefault().isMultiSimEnabled()) {
+                    intent.setClassName("com.android.settings",
+                            "com.android.settings.SelectSubscription");
+                    intent.putExtra(SelectSubscription.PACKAGE, "com.android.settings");
+                    intent.putExtra(SelectSubscription.TARGET_CLASS,
+                            "com.android.settings.IccLockSettings");
+                } else {
+                    intent.setClassName("com.android.settings", "com.android.settings.IccLockSettings");
+                }
+                iccLock.setIntent(intent);
             }
-            iccLock.setIntent(intent);
             // Credential storage
             mResetCredentials = root.findPreference(KEY_RESET_CREDENTIALS);
 
