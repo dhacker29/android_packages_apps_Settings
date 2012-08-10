@@ -42,6 +42,7 @@ import android.preference.PreferenceGroup;
 import android.preference.PreferenceScreen;
 import android.provider.Telephony;
 import android.telephony.MSimTelephonyManager;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -167,6 +168,12 @@ public class ApnSettings extends PreferenceActivity implements
 
     private void fillList() {
         String where = getOperatorNumericSelection();
+
+        if (TextUtils.isEmpty(where)) {
+            Log.d(TAG, "getOperatorNumericSelection is empty ");
+            return;
+        }
+
         Cursor cursor = getContentResolver().query(Telephony.Carriers.CONTENT_URI, new String[] {
                 "_id", "name", "apn", "type"}, where, null,
                 Telephony.Carriers.DEFAULT_SORT_ORDER);
