@@ -227,7 +227,10 @@ public class MSimStatus extends PreferenceActivity {
             public void onDataConnectionStateChanged(int state) {
                 mDataState = state;
                 updateDataState();
-                updateNetworkType(mSubscription);
+                if (mSubscription ==
+                            MSimTelephonyManager.getDefault().getPreferredDataSubscription()) {
+                    updateNetworkType(mSubscription);
+                }
             }
         };
         return phoneStateListener;
