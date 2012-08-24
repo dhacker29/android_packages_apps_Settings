@@ -604,6 +604,7 @@
         <activity android:name="MultiSimSettings"
                 android:label="@string/multi_sim_settings_title"
                 android:process="com.android.phone"
+                android:configChanges="mcc|mnc"
                 android:clearTaskOnLaunch="true">
            <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
