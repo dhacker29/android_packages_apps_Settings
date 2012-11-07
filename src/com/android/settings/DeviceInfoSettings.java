@@ -30,6 +30,7 @@ import android.preference.Preference;
 import android.preference.PreferenceGroup;
 import android.preference.PreferenceScreen;
 import android.provider.Settings;
+import android.telephony.MSimTelephonyManager;
 import android.util.Log;
 
 import java.io.BufferedReader;
@@ -110,8 +111,7 @@ public class DeviceInfoSettings extends SettingsPreferenceFragment {
             getPreferenceScreen().removePreference(findPreference(KEY_DEVICE_MEMORY));
         }
 
-        int resIndex = getArguments().getInt(Utils.RESOURCE_INDEX, 0);
-        if (Utils.MULTISIM_RESID == resIndex) {
+        if (MSimTelephonyManager.getDefault().isMultiSimEnabled()) {
             findPreference(KEY_STATUS).getIntent().setClassName(
                     "com.android.settings","com.android.settings.deviceinfo.MSimStatus");
         }
@@ -125,7 +125,8 @@ public class DeviceInfoSettings extends SettingsPreferenceFragment {
                 PROPERTY_EQUIPMENT_ID);
 
         // Remove Baseband version if wifi-only device
-        if (Utils.isWifiOnly(getActivity()) || (Utils.MULTISIM_RESID == resIndex)) {
+        if (Utils.isWifiOnly(getActivity()) ||
+                (MSimTelephonyManager.getDefault().isMultiSimEnabled())) {
             getPreferenceScreen().removePreference(findPreference(KEY_BASEBAND_VERSION));
         }
 

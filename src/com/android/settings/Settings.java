@@ -381,13 +381,6 @@ public class Settings extends PreferenceActivity
 
     private void updateHeaderList(List<Header> target) {
         int i = 0;
-        int settingsPrefScreenIndex = 0;
-
-        if (!MSimTelephonyManager.getDefault().isMultiSimEnabled()) {
-            settingsPrefScreenIndex = Utils.MULTISIM_DEF_RESID;
-        } else {
-            settingsPrefScreenIndex = Utils.MULTISIM_RESID;
-        }
 
         while (i < target.size()) {
             Header header = target.get(i);
@@ -447,10 +440,6 @@ public class Settings extends PreferenceActivity
                         || Utils.isMonkeyRunning()) {
                     target.remove(header);
                 }
-            } else if (id == R.id.about_settings) {
-                Bundle args = new Bundle();
-                args.putInt(Utils.RESOURCE_INDEX, settingsPrefScreenIndex);
-                header.fragmentArguments = args;
             } else if (id == R.id.multi_sim_settings) {
                 if (!MSimTelephonyManager.getDefault().isMultiSimEnabled())
                     target.remove(header);
