@@ -47,6 +47,8 @@ import android.util.Log;
 import android.telephony.TelephonyManager;
 import android.telephony.MSimTelephonyManager;
 
+import com.android.internal.telephony.msim.SubscriptionManager;
+
 import static com.android.internal.telephony.MSimConstants.DEFAULT_SUBSCRIPTION;
 
 public class DateTimeSettings extends SettingsPreferenceFragment
@@ -166,12 +168,19 @@ public class DateTimeSettings extends SettingsPreferenceFragment
         if (MSimTelephonyManager.getDefault().isMultiSimEnabled()) {
             activePhoneType = MSimTelephonyManager.getDefault().
                     getCurrentPhoneType(DEFAULT_SUBSCRIPTION);
+            if (TelephonyManager.PHONE_TYPE_CDMA == activePhoneType &&
+                    !isTimeServicesDaemonEnabled &&
+                    MSimTelephonyManager.getDefault().isSubActive(DEFAULT_SUBSCRIPTION)) {
+                Log.d("DateTimeSettings", "Disable manual date time settings options");
+                setAutoState(false, true);
+            }
         } else {
             activePhoneType = TelephonyManager.getDefault().getPhoneType();
-        }
-        if (TelephonyManager.PHONE_TYPE_CDMA == activePhoneType &&
-                                         !isTimeServicesDaemonEnabled) {
-            setAutoState(false, true);
+            if (TelephonyManager.PHONE_TYPE_CDMA == activePhoneType &&
+                    !isTimeServicesDaemonEnabled) {
+                Log.d("DateTimeSettings", "Disable manual date time settings options");
+                setAutoState(false, true);
+            }
         }
         ((CheckBoxPreference)mTime24Pref).setChecked(is24Hour());
 
