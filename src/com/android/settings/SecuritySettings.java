@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2007 The Android Open Source Project
- * Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
  *
  * Not a Contribution, Apache license notifications and license are retained
  * for attribution purposes only
@@ -345,28 +345,26 @@ public class SecuritySettings extends SettingsPreferenceFragment
             if (MSimTelephonyManager.getDefault().isMultiSimEnabled()) {
                 MSimTelephonyManager tm = MSimTelephonyManager.getDefault();
                 int numPhones = MSimTelephonyManager.getDefault().getPhoneCount();
-                boolean disableLock = false;
-                boolean removeLock = false;
+                boolean disableLock = true;
+                boolean removeLock = true;
                 for (int i = 0; i < numPhones; i++) {
                     // Do not display SIM lock for devices without an Icc card
-                    if (!tm.hasIccCard(i)) {
-                        removeLock = true;
-                    } else {
+                    if (tm.hasIccCard(i)) {
                         // Disable SIM lock if sim card is missing or unknown
                         removeLock = false;
-                        if ((tm.getSimState(i) == TelephonyManager.SIM_STATE_ABSENT)
-                                || (tm.getSimState(i) == TelephonyManager.SIM_STATE_UNKNOWN)) {
-                            disableLock = true;
-                        } else {
+                        if (!((tm.getSimState(i) == TelephonyManager.SIM_STATE_ABSENT)
+                                || (tm.getSimState(i) == TelephonyManager.SIM_STATE_UNKNOWN)
+                                || (tm.getSimState(i) == TelephonyManager.SIM_STATE_CARD_IO_ERROR))) {
                             disableLock = false;
                         }
                     }
                 }
                 if (removeLock) {
                     root.removePreference(root.findPreference(KEY_SIM_LOCK));
-                }
-                if (disableLock) {
-                    root.findPreference(KEY_SIM_LOCK).setEnabled(false);
+                } else {
+                    if (disableLock) {
+                        root.findPreference(KEY_SIM_LOCK).setEnabled(false);
+                    }
                 }
             } else {
                 // Do not display SIM lock for devices without an Icc card
