@@ -66,6 +66,7 @@
     <uses-permission android:name="android.permission.SET_TIME" />
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.CHANGE_PRIVACY_GUARD_STATE" />
+    <uses-permission android:name="android.permission.REBOOT" />
 
     <permission
         android:name="android.permission.REQUEST_SUPERUSER"
@@ -1703,6 +1704,8 @@
         <activity android:name=".cyanogenmod.QuickSettings" />
 
         <activity android:name=".cyanogenmod.MoreDeviceSettings" />
+
+        <activity android:name=".cyanogenmod.VoldSwitchablePair" />
 
         <!-- "Blacklist settings" UI, used only on voice-capable phone devices. -->
         <activity android:name="Settings$BlacklistSettingsActivity"
