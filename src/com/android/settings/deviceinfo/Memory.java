@@ -19,6 +19,7 @@ package com.android.settings.deviceinfo;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DialogFragment;
+import android.content.DialogInterface;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -31,13 +32,16 @@ import android.hardware.usb.UsbManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.IBinder;
+import android.os.PowerManager;
 import android.os.RemoteException;
 import android.os.ServiceManager;
+import android.os.SystemProperties; 
 import android.os.UserManager;
 import android.os.storage.IMountService;
 import android.os.storage.StorageEventListener;
 import android.os.storage.StorageManager;
 import android.os.storage.StorageVolume;
+import android.preference.CheckBoxPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceScreen;
@@ -79,6 +83,10 @@ public class Memory extends SettingsPreferenceFragment {
     private UsbManager mUsbManager;
 
     private ArrayList<StorageVolumePreferenceCategory> mCategories = Lists.newArrayList();
+    private static final String KEY_SWITCH_STORAGE = "key_switch_storage";
+    private static final String VOLD_SWITCH_PERSIST_PROP = "persist.sys.vold.switchexternal";
+    private static final String VOLD_SWITCH_RO_PROP = "ro.vold.switchablepair";
+    private CheckBoxPreference mSwitchStoragePref;
 
     @Override
     public void onCreate(Bundle icicle) {
@@ -92,6 +100,13 @@ public class Memory extends SettingsPreferenceFragment {
         mStorageManager.registerListener(mStorageListener);
 
         addPreferencesFromResource(R.xml.device_info_memory);
+
+        String voldswitch = SystemProperties.get(VOLD_SWITCH_PERSIST_PROP, "1");
+        mSwitchStoragePref = (CheckBoxPreference) findPreference(KEY_SWITCH_STORAGE);
+        mSwitchStoragePref.setChecked("1".equals(voldswitch));
+        if (SystemProperties.get("").equals(VOLD_SWITCH_RO_PROP)) {
+            removePreference(KEY_SWITCH_STORAGE);
+        }
 
         addCategory(StorageVolumePreferenceCategory.buildForInternal(context));
 
@@ -211,7 +226,13 @@ public class Memory extends SettingsPreferenceFragment {
 
     @Override
     public boolean onPreferenceTreeClick(PreferenceScreen preferenceScreen, Preference preference) {
-        if (StorageVolumePreferenceCategory.KEY_CACHE.equals(preference.getKey())) {
+        if(preference == mSwitchStoragePref) {
+            Log.d(TAG,"Setting persist.sys.vold.switchexternal to "+(
+                    mSwitchStoragePref.isChecked() ? "1" : "0"));
+            SystemProperties.set(VOLD_SWITCH_PERSIST_PROP,
+                    mSwitchStoragePref.isChecked() ? "1" : "0");
+            showRebootPrompt();
+        } else if (StorageVolumePreferenceCategory.KEY_CACHE.equals(preference.getKey())) {
             ConfirmClearCacheFragment.show(this);
             return true;
         }
@@ -379,6 +400,7 @@ public class Memory extends SettingsPreferenceFragment {
         }
     }
 
+
     /**
      * Dialog to request user confirmation before clearing all cache data.
      */
@@ -416,5 +438,22 @@ public class Memory extends SettingsPreferenceFragment {
 
             return builder.create();
         }
+    }
+
+    private void showRebootPrompt() {
+        AlertDialog dialog = new AlertDialog.Builder(getActivity())
+                .setTitle(R.string.reboot_prompt_title)
+                .setMessage(R.string.reboot_prompt_message)
+                .setPositiveButton(R.string.yes, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+                        pm.reboot(null);
+                    }
+                })
+                .setNegativeButton(R.string.no, null)
+                .create();
+
+        dialog.show();
     }
 }
