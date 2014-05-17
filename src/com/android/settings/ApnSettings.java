@@ -39,6 +39,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.SystemProperties;
 import android.preference.Preference;
+import android.preference.PreferenceActivity;
 import android.preference.PreferenceGroup;
 import android.preference.PreferenceScreen;
 import android.provider.Telephony;
@@ -238,7 +239,8 @@ public class ApnSettings extends SettingsPreferenceFragment implements
         editBundle.putString(ApnEditor.EDIT_ACTION, Intent.ACTION_INSERT);
         editBundle.putString(ApnEditor.EDIT_DATA, Telephony.Carriers.CONTENT_URI.toSafeString());
         editBundle.putString(OPERATOR_NUMERIC_EXTRA, getOperatorNumeric()[0]);
-        startFragment(null, ApnEditor.class.getName(), 0, editBundle);
+        ((PreferenceActivity) getActivity()).startPreferencePanel(ApnEditor.class.getName(), editBundle,
+                            R.string.apn_edit, null, null, 0);
     }
 
     @Override
@@ -248,7 +250,8 @@ public class ApnSettings extends SettingsPreferenceFragment implements
         Bundle editBundle = new Bundle();
         editBundle.putString(ApnEditor.EDIT_ACTION, Intent.ACTION_EDIT);
         editBundle.putString(ApnEditor.EDIT_DATA, url.toSafeString());
-        startFragment(null, ApnEditor.class.getName(), 0, editBundle);
+        ((PreferenceActivity) getActivity()).startPreferencePanel(ApnEditor.class.getName(), editBundle,
+                R.string.apn_edit, null, null, 0);
         return true;
     }
 
