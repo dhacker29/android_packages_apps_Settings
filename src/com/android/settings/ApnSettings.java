@@ -19,6 +19,8 @@
 
 package com.android.settings;
 
+import java.util.ArrayList;
+
 import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
@@ -37,7 +39,6 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.SystemProperties;
 import android.preference.Preference;
-import android.preference.PreferenceActivity;
 import android.preference.PreferenceGroup;
 import android.preference.PreferenceScreen;
 import android.provider.Telephony;
@@ -45,6 +46,7 @@ import android.telephony.MSimTelephonyManager;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.widget.Toast;
 
@@ -52,9 +54,7 @@ import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.TelephonyIntents;
 import com.android.internal.telephony.TelephonyProperties;
 
-import java.util.ArrayList;
-
-public class ApnSettings extends PreferenceActivity implements
+public class ApnSettings extends SettingsPreferenceFragment implements
         Preference.OnPreferenceChangeListener {
     static final String TAG = "ApnSettings";
 
@@ -125,23 +125,23 @@ public class ApnSettings extends PreferenceActivity implements
     }
 
     @Override
-    protected void onCreate(Bundle icicle) {
+    public void onCreate(Bundle icicle) {
         super.onCreate(icicle);
-
         addPreferencesFromResource(R.xml.apn_settings);
-        getListView().setItemsCanFocus(true);
-        mSubscription = getIntent().getIntExtra(SelectSubscription.SUBSCRIPTION_KEY,
+        mSubscription = getActivity().getIntent().getIntExtra(SelectSubscription.SUBSCRIPTION_KEY,
                 MSimTelephonyManager.getDefault().getDefaultSubscription());
         Log.d(TAG, "onCreate received sub :" + mSubscription);
+
         mMobileStateFilter = new IntentFilter(
                 TelephonyIntents.ACTION_ANY_DATA_CONNECTION_STATE_CHANGED);
+        setHasOptionsMenu(true);
     }
 
     @Override
-    protected void onResume() {
+    public void onResume() {
         super.onResume();
 
-        registerReceiver(mMobileStateReceiver, mMobileStateFilter);
+        getActivity().registerReceiver(mMobileStateReceiver, mMobileStateFilter);
 
         if (!mRestoreDefaultApnMode) {
             fillList();
@@ -151,19 +151,9 @@ public class ApnSettings extends PreferenceActivity implements
     }
 
     @Override
-    protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
-
-        mSubscription = intent.getIntExtra(SelectSubscription.SUBSCRIPTION_KEY,
-                MSimTelephonyManager.getDefault().getDefaultSubscription());
-        Log.d(TAG, "onNewIntent received sub :" + mSubscription);
-    }
-
-    @Override
-    protected void onPause() {
+    public void onPause() {
         super.onPause();
-
-        unregisterReceiver(mMobileStateReceiver);
+        getActivity().unregisterReceiver(mMobileStateReceiver);
     }
 
     private void fillList() {
@@ -178,7 +168,7 @@ public class ApnSettings extends PreferenceActivity implements
                 "_id", "name", "apn", "type"}, where, null,
                 Telephony.Carriers.DEFAULT_SORT_ORDER);
 
-        PreferenceGroup apnList = (PreferenceGroup) findPreference("apn_list");
+        PreferenceGroup apnList = (PreferenceGroup) getPreferenceScreen().findPreference("apn_list");
         apnList.removeAll();
 
         ArrayList<Preference> mmsApnList = new ArrayList<Preference>();
@@ -191,7 +181,7 @@ public class ApnSettings extends PreferenceActivity implements
             String key = cursor.getString(ID_INDEX);
             String type = cursor.getString(TYPES_INDEX);
 
-            ApnPreference pref = new ApnPreference(this);
+            ApnPreference pref = new ApnPreference(getActivity());
 
             pref.setKey(key);
             pref.setTitle(name);
@@ -219,15 +209,14 @@ public class ApnSettings extends PreferenceActivity implements
     }
 
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        super.onCreateOptionsMenu(menu);
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        super.onCreateOptionsMenu(menu, inflater);
         menu.add(0, MENU_NEW, 0,
                 getResources().getString(R.string.menu_new))
                 .setIcon(android.R.drawable.ic_menu_add);
         menu.add(0, MENU_RESTORE, 0,
                 getResources().getString(R.string.menu_restore))
                 .setIcon(android.R.drawable.ic_menu_upload);
-        return true;
     }
 
     @Override
@@ -245,16 +234,21 @@ public class ApnSettings extends PreferenceActivity implements
     }
 
     private void addNewApn() {
-        Intent intent = new Intent(Intent.ACTION_INSERT, Telephony.Carriers.CONTENT_URI);
-        intent.putExtra(OPERATOR_NUMERIC_EXTRA, getOperatorNumeric()[0]);
-        startActivity(intent);
+        Bundle editBundle = new Bundle();
+        editBundle.putString(ApnEditor.EDIT_ACTION, Intent.ACTION_INSERT);
+        editBundle.putString(ApnEditor.EDIT_DATA, Telephony.Carriers.CONTENT_URI.toSafeString());
+        editBundle.putString(OPERATOR_NUMERIC_EXTRA, getOperatorNumeric()[0]);
+        startFragment(null, ApnEditor.class.getName(), 0, editBundle);
     }
 
     @Override
     public boolean onPreferenceTreeClick(PreferenceScreen preferenceScreen, Preference preference) {
         int pos = Integer.parseInt(preference.getKey());
         Uri url = ContentUris.withAppendedId(Telephony.Carriers.CONTENT_URI, pos);
-        startActivity(new Intent(Intent.ACTION_EDIT, url));
+        Bundle editBundle = new Bundle();
+        editBundle.putString(ApnEditor.EDIT_ACTION, Intent.ACTION_EDIT);
+        editBundle.putString(ApnEditor.EDIT_DATA, url.toSafeString());
+        startFragment(null, ApnEditor.class.getName(), 0, editBundle);
         return true;
     }
 
@@ -291,6 +285,12 @@ public class ApnSettings extends PreferenceActivity implements
         return key;
     }
 
+    @Override
+    protected void showDialog(int dialogId) {
+        removeDialog(dialogId);
+        super.showDialog(dialogId);
+    }
+
     private boolean restoreDefaultApn() {
         showDialog(DIALOG_RESTORE_DEFAULTAPN);
         mRestoreDefaultApnMode = true;
@@ -320,9 +320,9 @@ public class ApnSettings extends PreferenceActivity implements
                     fillList();
                     getPreferenceScreen().setEnabled(true);
                     mRestoreDefaultApnMode = false;
-                    dismissDialog(DIALOG_RESTORE_DEFAULTAPN);
+                    removeDialog(DIALOG_RESTORE_DEFAULTAPN);
                     Toast.makeText(
-                        ApnSettings.this,
+                        getActivity(),
                         getResources().getString(
                                 R.string.restore_default_apn_completed),
                         Toast.LENGTH_LONG).show();
@@ -353,21 +353,16 @@ public class ApnSettings extends PreferenceActivity implements
     }
 
     @Override
-    protected Dialog onCreateDialog(int id) {
+    public Dialog onCreateDialog(int id) {
         if (id == DIALOG_RESTORE_DEFAULTAPN) {
-            ProgressDialog dialog = new ProgressDialog(this);
+            ProgressDialog dialog = new ProgressDialog(getActivity());
             dialog.setMessage(getResources().getString(R.string.restore_default_apn));
             dialog.setCancelable(false);
+            dialog.setCanceledOnTouchOutside(false);
+            getPreferenceScreen().setEnabled(false);
             return dialog;
         }
         return null;
-    }
-
-    @Override
-    protected void onPrepareDialog(int id, Dialog dialog) {
-        if (id == DIALOG_RESTORE_DEFAULTAPN) {
-            getPreferenceScreen().setEnabled(false);
-        }
     }
 
     private String getOperatorNumericSelection() {
